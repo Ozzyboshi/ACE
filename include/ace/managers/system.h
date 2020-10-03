@@ -45,8 +45,12 @@ void systemSetInt(
 );
 
 void systemUse(void);
+void systemUseNoInts(void);
+void systemUseNoInts2(void);
 
 void systemUnuse(void);
+void systemUnuseNoInts(void);
+void systemUnuseNoInts2(void);
 
 UBYTE systemIsUsed(void);
 

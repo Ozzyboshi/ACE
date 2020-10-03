@@ -397,7 +397,100 @@ void systemUnuse(void) {
 		// Everything that's supported by ACE to simplify things for now
 		g_pCustom->intena = INTF_SETCLR | INTF_INTEN | (
 			INTF_BLIT | INTF_COPER | INTF_VERTB |
-			INTF_PORTS | INTF_AUD0 | INTF_AUD1 | INTF_AUD2 | INTF_AUD3
+			INTF_PORTS
+		);
+	}
+#if defined(ACE_DEBUG)
+	if(s_wSystemUses < 0) {
+		logWrite("ERR: System uses less than 0!\n");
+		s_wSystemUses = 0;
+	}
+#endif
+}
+
+void systemUnuseNoInts(void) {
+	--s_wSystemUses;
+	if(!s_wSystemUses) {
+		if(g_pCustom->dmaconr & DMAF_DISK) {
+			// Flush disk activity if it was used
+			// This 'if' is here because otherwise systemUnuse() called
+			// by systemCreate() would indefinitely wait for OS when it's killed.
+			// systemUse() restores disk DMA, so it's an easy check if OS was
+			// actually restored.
+			systemFlushIo();
+		}
+
+		// Disable interrupts (this is the actual "kill system/OS" part)
+		g_pCustom->intena = 0x7FFF;
+		g_pCustom->intreq = 0x7FFF;
+
+		// Game's bitplanes & copperlists are still used so don't disable them
+		// Wait for vbl before disabling sprite DMA
+		///while (!(g_pCustom->intreqr & INTF_VERTB)) {}
+		g_pCustom->dmacon = s_uwOsMinDma;
+
+		// Save OS interrupt vectors and enable ACE's
+		g_pCustom->intreq = 0x7FFF;
+		//for(UWORD i = 0; i < SYSTEM_INT_VECTOR_COUNT; ++i) {
+		for(UWORD i = 1; i < 2; ++i) {
+			s_pOsHwInterrupts[i] = s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i];
+			s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i] = s_pAceHwInterrupts[i];
+		}
+
+		// Enable needed DMA (and interrupt) channels
+		g_pCustom->dmacon = DMAF_SETCLR | DMAF_MASTER | s_uwAceDmaCon;
+		// Everything that's supported by ACE to simplify things for now
+		g_pCustom->intena = INTF_SETCLR | INTF_INTEN | (
+			INTF_BLIT | INTF_COPER | INTF_VERTB |
+			INTF_PORTS
+		);
+	}
+#if defined(ACE_DEBUG)
+	if(s_wSystemUses < 0) {
+		logWrite("ERR: System uses less than 0!\n");
+		s_wSystemUses = 0;
+	}
+#endif
+}
+
+void systemUnuseNoInts2(void) {
+	--s_wSystemUses;
+	if(!s_wSystemUses) {
+		if(g_pCustom->dmaconr & DMAF_DISK) {
+			// Flush disk activity if it was used
+			// This 'if' is here because otherwise systemUnuse() called
+			// by systemCreate() would indefinitely wait for OS when it's killed.
+			// systemUse() restores disk DMA, so it's an easy check if OS was
+			// actually restored.
+			systemFlushIo();
+		}
+
+		// Disable interrupts (this is the actual "kill system/OS" part)
+		g_pCustom->intena = 0x7FFF;
+		g_pCustom->intreq = 0x7FFF;
+
+		// Game's bitplanes & copperlists are still used so don't disable them
+		// Wait for vbl before disabling sprite DMA
+		while (!(g_pCustom->intreqr & INTF_VERTB)) {}
+		g_pCustom->dmacon = s_uwOsMinDma;
+
+		// Save OS interrupt vectors and enable ACE's
+		g_pCustom->intreq = 0x7FFF;
+		for(UWORD i = 0; i < SYSTEM_INT_VECTOR_COUNT; ++i) {
+		//for(UWORD i = 0; i < 2; ++i) {
+			if (i!=2)
+			{
+			s_pOsHwInterrupts[i] = s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i];
+			s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i] = s_pAceHwInterrupts[i];
+			}
+		}
+
+		// Enable needed DMA (and interrupt) channels
+		g_pCustom->dmacon = DMAF_SETCLR | DMAF_MASTER | s_uwAceDmaCon;
+		// Everything that's supported by ACE to simplify things for now
+		g_pCustom->intena = INTF_SETCLR | INTF_INTEN | (
+			INTF_BLIT | INTF_COPER | INTF_VERTB |
+			INTF_PORTS
 		);
 	}
 #if defined(ACE_DEBUG)
@@ -419,6 +512,47 @@ void systemUse(void) {
 		// Restore interrupt vectors
 		for(UWORD i = 0; i < SYSTEM_INT_VECTOR_COUNT; ++i) {
 			s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i] = s_pOsHwInterrupts[i];
+		}
+		// restore old DMA/INTENA/ADKCON etc. settings
+		// All interrupts but only needed DMA
+		g_pCustom->dmacon = DMAF_SETCLR | DMAF_MASTER | (s_uwOsDmaCon & s_uwOsMinDma);
+		g_pCustom->intena = INTF_SETCLR | INTF_INTEN  | s_uwOsIntEna;
+	}
+	++s_wSystemUses;
+}
+
+void systemUseNoInts(void) {
+	if(!s_wSystemUses) {
+		// Disable app interrupts/dma, keep display-related DMA
+		g_pCustom->intena = 0x7FFF;
+		g_pCustom->intreq = 0x7FFF;
+		g_pCustom->dmacon = s_uwOsMinDma;
+		while (!(g_pCustom->intreqr & INTF_VERTB)) {}
+
+		// Restore interrupt vectors
+		/*for(UWORD i = 0; i < SYSTEM_INT_VECTOR_COUNT; ++i) {*/
+		for(UWORD i = 1; i < 2; ++i) {
+			s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i] = s_pOsHwInterrupts[i];
+		}
+		// restore old DMA/INTENA/ADKCON etc. settings
+		// All interrupts but only needed DMA
+		g_pCustom->dmacon = DMAF_SETCLR | DMAF_MASTER | (s_uwOsDmaCon & s_uwOsMinDma);
+		g_pCustom->intena = INTF_SETCLR | INTF_INTEN  | s_uwOsIntEna;
+	}
+	++s_wSystemUses;
+}
+
+void systemUseNoInts2(void) {
+	if(!s_wSystemUses) {
+		// Disable app interrupts/dma, keep display-related DMA
+		g_pCustom->intena = 0x7FFF;
+		g_pCustom->intreq = 0x7FFF;
+		g_pCustom->dmacon = s_uwOsMinDma;
+		while (!(g_pCustom->intreqr & INTF_VERTB)) {}
+
+		// Restore interrupt vectors
+		for(UWORD i = 0; i < SYSTEM_INT_VECTOR_COUNT; ++i) {
+			if (i!=2) s_pHwVectors[SYSTEM_INT_VECTOR_FIRST + i] = s_pOsHwInterrupts[i];
 		}
 		// restore old DMA/INTENA/ADKCON etc. settings
 		// All interrupts but only needed DMA
