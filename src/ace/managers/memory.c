@@ -228,7 +228,7 @@ void _memFreeDbg(
 }
 
 void *_memAllocRls(ULONG ulSize, ULONG ulFlags) {
-	systemUse();
+	//systemUse();
 	void *pResult;
 	#ifdef AMIGA
 	pResult = AllocMem(ulSize, ulFlags);
@@ -240,18 +240,18 @@ void *_memAllocRls(ULONG ulSize, ULONG ulFlags) {
 	#else
 	pResult =  malloc(ulSize);
 	#endif // AMIGA
-	systemUnuse();
+	//systemUnuse();
 	return pResult;
 }
 
 void _memFreeRls(void *pMem, ULONG ulSize) {
-	systemUse();
+//	systemUse();
 	#ifdef AMIGA
 	FreeMem(pMem, ulSize);
 	#else
 	free(pMem);
 	#endif // AMIGA
-	systemUnuse();
+//	systemUnuse();
 }
 
 void _memCheckTrashAtAddr(void *pMem, UWORD uwLine, const char *szFile) {

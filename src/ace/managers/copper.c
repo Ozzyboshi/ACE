@@ -268,8 +268,10 @@ void copBlockDestroy(tCopList *pCopList, tCopBlock *pBlock) {
 	}
 
 	// Free mem
-	memFree(pBlock->pCmds, sizeof(tCopCmd)*pBlock->uwMaxCmds);
-	memFree(pBlock, sizeof(tCopBlock));
+	/*memFree(pBlock->pCmds, sizeof(tCopCmd)*pBlock->uwMaxCmds);
+	memFree(pBlock, sizeof(tCopBlock));*/
+	FreeMem(pBlock->pCmds, sizeof(tCopCmd)*pBlock->uwMaxCmds);
+	FreeMem(pBlock, sizeof(tCopBlock));
 
 	pCopList->ubStatus |= STATUS_REALLOC_CURR;
 	--pCopList->uwBlockCount;

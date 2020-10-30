@@ -6,6 +6,10 @@
 #include <ace/utils/tag.h>
 #include <ace/utils/extview.h>
 
+// alessio
+#include <clib/exec_protos.h> // AvailMem, AllocMem, FreeMem, etc.
+
+
 #ifdef AMIGA
 
 // Flags for internal usage.
@@ -234,7 +238,8 @@ void simpleBufferDestroy(tSimpleBufferManager *pManager) {
 		bitmapDestroy(pManager->pBack);
 	}
 	bitmapDestroy(pManager->pFront);
-	memFree(pManager, sizeof(tSimpleBufferManager));
+	//memFree(pManager, sizeof(tSimpleBufferManager));
+	FreeMem(pManager,sizeof(tSimpleBufferManager));
 	logBlockEnd("simpleBufferDestroy()");
 }
 
